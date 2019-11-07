@@ -76,9 +76,9 @@ int main (int argc, char* argv[]){
         //Obtener tiempo actual de programa
         current_millis = millis();
 
-        //Cada 100 ms deberá leer edl estado de los pulsadores de las dos tarjetas elegidas.
+        //Cada 100 ms deberá leer el estado de los pulsadores de las dos tarjetas elegidas.
         if((current_millis - previous_millis1) >= interval1) {
-            //Si S1 de una tarjeta está pulsado, encenfder la luz amarilla de la otra tarjeta, y si no está pulsado, apagar.
+            //Si S1 de una tarjeta está pulsado, encender la luz amarilla de la otra tarjeta, y si no está pulsado, apagar.
 
             //Igual, el pulsador S2 de una tarjeta actua sobre luz roja de la otra.
             previous_millis1 = millis();
