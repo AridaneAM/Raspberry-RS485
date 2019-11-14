@@ -31,30 +31,15 @@ int ID;
 // Declaracion de la funcion prototipo...
 // Lectura de temperatura de CPU
 char CPU_temp (void);
-
-////////////////////////////////////////////////////////////
-// Declaracion de la funcion prototipo...
 // Lectura de carga de CPU
 char CPU_usage (void);
-
-////////////////////////////////////////////////////////////
-// Declaracion de la funcion prototipo...
 // Lectura de pulsador
 char button_S1_read (void);
 char button_S2_read (void);
-
-////////////////////////////////////////////////////////////
-// Declaracion de la funcion prototipo...
 // Cambiar estado LED
 void change_LED (int LED, char state);
-
-////////////////////////////////////////////////////////////
-// Declaracion de la funcion prototipo...
 // Comprobación checksum
 int checksum(char *buffer);
-
-////////////////////////////////////////////////////////////
-// Declaracion de la funcion prototipo...
 // Enviar mensaje a maestro
 void send_reply(char *buff, char data_2);
 

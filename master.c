@@ -39,6 +39,8 @@ void RPI_search(void);
 void send_msg(char ID_slave, char com, char par);
 // Comprobar estado de raspberry
 void checkStatus(char ID, char com);
+// Comprobación checksum
+int checksum(char *buffer);
 
 ////////////////////////////////////////////////////////////
 // Declaracion de Variables Globales ...
@@ -71,13 +73,15 @@ int main (int argc, char* argv[]){
         exit(0);
     }
 
-    //Abrir fichero "config.txt"
+    //Abrir fichero "config.txt" y crear "log.txt"
     config_file = fopen("config.txt", "r");
     if (config_file == NULL) {
         printf("No exite fichero de configuración\n");
         fflush(stdout);
         exit(0);
     }    
+    log_file = fopen("log.txt", "w");
+
     //Leer número identificador de "config.txt"
     fscanf(config_file, "%d", &ID);
     //Cerrar fichero config
@@ -134,6 +138,13 @@ int main (int argc, char* argv[]){
             previous_millis2 = millis();
         }
     }
+
+    //cerrar puerto serie
+    serial_close(serial_fd);
+    //cerrar fichero log
+	fclose(log_file);
+
+    return 0;
 }
 
 
@@ -150,10 +161,15 @@ void RPI_search(void) {
         timeout_ocurred = serial_read(serial_fd, buffer_in, 6, timeout_usec);
         //Si llega respuesta antes del timeout
         if(timeout_ocurred != 0) {
-            //Guardar en RP_IDs[] el ID de la raspberry
-            RPI_IDs[count_RPI] = i;
-            //Contar el nº de rasberrys encontradas
-            count_RPI++;
+            //Guardar en "log.txt" la trama recibida
+            fprintf(log_file, "%02X, %02X, %02X, %02X, %02X, %02X\n", buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3], buffer_in[4], buffer_in[5]);
+			fflush(log_file);
+            if(checksum(buffer_in)) {
+                //Guardar en RP_IDs[] el ID de la raspberry
+                RPI_IDs[count_RPI] = i;
+                //Contar el nº de rasberrys encontradas
+                count_RPI++;
+            }
         }
     }
 }
@@ -179,9 +195,25 @@ char checkStatus(char ID, char com) {
     timeout_ocurred = serial_read(serial_fd, buffer_in, 6, timeout_usec);
     //Si llega respuesta antes del timeout
     if(timeout_ocurred != 0) {
-        // Devolver estado
-        return buffer_in[4];
+        //Guardar en "log.txt" la trama recibida
+        fprintf(log_file, "%02X, %02X, %02X, %02X, %02X, %02X\n", buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3], buffer_in[4], buffer_in[5]);
+        fflush(log_file);
+        //Comprobar checksum de la trama
+        if(checksum(buffer_in)) {
+            // Devolver estado
+            return buffer_in[4];
+        } else {
+            return -1;
+        }
     } else {
         return -1;
     }
+}
+
+//Comprobación de checksum
+int checksum(char *buff) {
+    int cks;
+    cks = ((int)buff[0] + (int)buff[1] + (int)buff[2] + (int)buff[3] + (int)buff[4]) % 256;
+    
+    return (cks == (int)buff[5]) ? 1 : 0;
 }
