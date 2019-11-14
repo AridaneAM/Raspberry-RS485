@@ -110,15 +110,29 @@ int main (int argc, char* argv[]){
             //Si S1 de una tarjeta está pulsado, encender la luz amarilla de la otra tarjeta, y si no está pulsado, apagar.
             //Igual, el pulsador S2 de una tarjeta actua sobre luz roja de la otra.
 
-            state = checkStatus(RPI_IDs[0], S1);
-            state ? send_msg(RPI_IDs[1], LEDA, 1) : send_msg(RPI_IDs[1], LEDA, 0);
-            state = checkStatus(RPI_IDs[0], S2);
-            state ? send_msg(RPI_IDs[1], LEDR, 1) : send_msg(RPI_IDs[1], LEDR, 0);
-
-            state = checkStatus(RPI_IDs[1], S1);
-            state ? send_msg(RPI_IDs[0], LEDA, 1) : send_msg(RPI_IDs[0], LEDA, 0);
-            state = checkStatus(RPI_IDs[1], S2);
-            state ? send_msg(RPI_IDs[0], LEDR, 1) : send_msg(RPI_IDs[0], LEDR, 0);
+            if(checkStatus(RPI_IDs[0], S1)) {
+                //Enviar mensaje a la otra raspberry
+                send_msg(RPI_IDs[1], LEDA, 1);
+                //Enviar mensaje por MQTT (usar sprintf)
+                
+            } else {
+                send_msg(RPI_IDs[1], LEDA, 0);
+            }
+            if(checkStatus(RPI_IDs[0], S2)) {
+                send_msg(RPI_IDs[1], LEDR, 1);
+            } else {
+                send_msg(RPI_IDs[1], LEDR, 0);
+            }
+            if(checkStatus(RPI_IDs[1], S1)) {
+                send_msg(RPI_IDs[0], LEDA, 1);
+            } else {
+                send_msg(RPI_IDs[0], LEDA, 0);
+            }
+            if(checkStatus(RPI_IDs[1], S2)) {
+                send_msg(RPI_IDs[0], LEDR, 1);
+            } else {
+                send_msg(RPI_IDs[0], LEDR, 0);
+            }
 
             previous_millis1 = millis();
         }
@@ -127,13 +141,13 @@ int main (int argc, char* argv[]){
         //cada 5 segundos deberá mostrar en pantalla el nivel de uso y la temperatura de las CPU de las dos tarjetas esclavas elegidas.
         if((current_millis - previous_millis2) >= interval2) {
             state = checkStatus(RPI_IDs[0], CPU_usage);
-            printf("Uso de CPU de raspberry con ID %d: %d %%\n", (int)RPI_IDs[0], (int)status);
+            printf("Uso de CPU de raspberry con ID %d: %d %%\n", (int)RPI_IDs[0], (int)state);
             state = checkStatus(RPI_IDs[0], CPU_temp);
-            printf("Temperatura de raspberry con ID %d: %d ºC\n", (int)RPI_IDs[0], (int)status);
+            printf("Temperatura de raspberry con ID %d: %d ºC\n", (int)RPI_IDs[0], (int)state);
             state = checkStatus(RPI_IDs[1], CPU_usage);
-            printf("Uso de CPU de raspberry con ID %d: %d %%\n", (int)RPI_IDs[0], (int)status);
+            printf("Uso de CPU de raspberry con ID %d: %d %%\n", (int)RPI_IDs[0], (int)state);
             state = checkStatus(RPI_IDs[1], CPU_temp);
-            printf("Temperatura de raspberry con ID %d: %d ºC\n", (int)RPI_IDs[0], (int)status);
+            printf("Temperatura de raspberry con ID %d: %d ºC\n", (int)RPI_IDs[0], (int)state);
 
             previous_millis2 = millis();
         }
@@ -198,6 +212,8 @@ char checkStatus(char ID, char com) {
         //Guardar en "log.txt" la trama recibida
         fprintf(log_file, "%02X, %02X, %02X, %02X, %02X, %02X\n", buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3], buffer_in[4], buffer_in[5]);
         fflush(log_file);
+        //sprintf y enviar log por mqtt
+
         //Comprobar checksum de la trama
         if(checksum(buffer_in)) {
             // Devolver estado
