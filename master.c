@@ -11,7 +11,16 @@
 #include <wiringPi.h>
 
 //TIMEOUT (ms) para la recepción de datos
-#define timeout_usec 10000  
+#define timeout_usec 1000000000  
+
+//Macros de trama
+#define Hola          0x00;
+#define LEDR          0x10;
+#define LEDA          0x12;
+#define S1            0x30;
+#define S2            0x32;
+#define CPU_usage     0x40;
+#define CPU_temp      0x42;
 
 //Declaración de ficheros
 FILE *config_file;
@@ -19,11 +28,17 @@ FILE *log_file;
 
 //ID de dispositivo
 char ID;
+// estado de raspberry esclava
+char state;
 
 ////////////////////////////////////////////////////////////
 // Declaracion de la funcion prototipo...
-// Enviar una cadena de caracteres por el puerto serie
-void serial_send_string(char * msg);
+// Busqueda de raspberrys esclavas disponibles
+void RPI_search(void); 
+// Enviar trama por serie
+void send_msg(char ID_slave, char com, char par);
+// Comprobar estado de raspberry
+void checkStatus(char ID, char com);
 
 ////////////////////////////////////////////////////////////
 // Declaracion de Variables Globales ...
@@ -35,6 +50,12 @@ char buffer_out[7]; //Buffer para almacenar trama a enviar
 
 unsigned int previous_millis1, previous_millis2, current_millis; //Variables para medir el tiempo de ejecución del programa
 unsigned int interval1 = 100, interval2 = 5000; //Intervalos de tiempo para cada acción
+
+// Array para almacenar IDs de raspberrys encontradas
+char RPI_IDs[21];
+// Cuenta de cantidad de esclavos
+char count_RPI;
+
 ////////////////////////////////////////////////////////////
 // ******** Programa PRINCIPAL ****************************
 int main (int argc, char* argv[]){
@@ -43,7 +64,7 @@ int main (int argc, char* argv[]){
 	wiringPiSetup();
 
     // Abre el puerto serie
-    serial_fd=serial_open("/dev/ttyUSB0", B9600); 
+    serial_fd=serial_open("/dev/ttyS0", B9600); 
     if (serial_fd==-1) {    // Error en apertura?
         printf ("Error abriendo el puerto serie\n");
         fflush(stdout);
@@ -63,9 +84,13 @@ int main (int argc, char* argv[]){
     fclose(config_file);
 
     //Detectar qué raspberry hay conectada con comando Hola
-
+    RPI_search();
     //Mostrar listado en pantalla 
-
+    printf("Se han encontrado %d raspberrys con IDs: ", (int)count_RPI);
+    for (char i = 0; i < count_RPI; i++) {
+        printf("%d, ", (int)RPI_IDs[i]);
+    }
+    fflush(stdout);
     //Elegir 2 de ellas
 
     //Iniciar contador de tiempo de ejecución
@@ -79,15 +104,33 @@ int main (int argc, char* argv[]){
         //Cada 100 ms deberá leer el estado de los pulsadores de las dos tarjetas elegidas.
         if((current_millis - previous_millis1) >= interval1) {
             //Si S1 de una tarjeta está pulsado, encender la luz amarilla de la otra tarjeta, y si no está pulsado, apagar.
-
             //Igual, el pulsador S2 de una tarjeta actua sobre luz roja de la otra.
+
+            state = checkStatus(RPI_IDs[0], S1);
+            state ? send_msg(RPI_IDs[1], LEDA, 1) : send_msg(RPI_IDs[1], LEDA, 0);
+            state = checkStatus(RPI_IDs[0], S2);
+            state ? send_msg(RPI_IDs[1], LEDR, 1) : send_msg(RPI_IDs[1], LEDR, 0);
+
+            state = checkStatus(RPI_IDs[1], S1);
+            state ? send_msg(RPI_IDs[0], LEDA, 1) : send_msg(RPI_IDs[0], LEDA, 0);
+            state = checkStatus(RPI_IDs[1], S2);
+            state ? send_msg(RPI_IDs[0], LEDR, 1) : send_msg(RPI_IDs[0], LEDR, 0);
+
             previous_millis1 = millis();
         }
 
 
         //cada 5 segundos deberá mostrar en pantalla el nivel de uso y la temperatura de las CPU de las dos tarjetas esclavas elegidas.
         if((current_millis - previous_millis2) >= interval2) {
-            //Acción
+            state = checkStatus(RPI_IDs[0], CPU_usage);
+            printf("Uso de CPU de raspberry con ID %d: %d %%\n", (int)RPI_IDs[0], (int)status);
+            state = checkStatus(RPI_IDs[0], CPU_temp);
+            printf("Temperatura de raspberry con ID %d: %d ºC\n", (int)RPI_IDs[0], (int)status);
+            state = checkStatus(RPI_IDs[1], CPU_usage);
+            printf("Uso de CPU de raspberry con ID %d: %d %%\n", (int)RPI_IDs[0], (int)status);
+            state = checkStatus(RPI_IDs[1], CPU_temp);
+            printf("Temperatura de raspberry con ID %d: %d ºC\n", (int)RPI_IDs[0], (int)status);
+
             previous_millis2 = millis();
         }
     }
@@ -97,13 +140,48 @@ int main (int argc, char* argv[]){
 /////////////////////////////////////////////////////////
 // **************** FUNCIONES ///////////////////////////
 
-// Envia una cadena de caracteres terminada en '\0' por el puerto serie
-void serial_send_string(char * msg){
-    int i;
-    i = 0;
-    while (msg[i] != '\0'){
-        // Transmitir dato (caracter)
-        serial_send(serial_fd, &msg[i] ,1);
-        i++;
+// Busqueda de raspberrys esclavas disponibles
+void RPI_search(void) {
+    //Busqueda de hasta 20 raspberrys
+    for(char i = 0; i < 20, i++) {
+        // Enviar mensaje a la raspberry
+        send_msg(i, 0x00, 0x00);
+        //Recibir respuesta
+        timeout_ocurred = serial_read(serial_fd, buffer_in, 6, timeout_usec);
+        //Si llega respuesta antes del timeout
+        if(timeout_ocurred != 0) {
+            //Guardar en RP_IDs[] el ID de la raspberry
+            RPI_IDs[count_RPI] = i;
+            //Contar el nº de rasberrys encontradas
+            count_RPI++;
+        }
+    }
+}
+
+// Enviar trama por serie
+void send_msg(char ID_slave, char com, char par) {
+    buffer_out[0] = ID;
+    buffer_out[1] = ID_slave;
+    buffer_out[2] = com;
+    buffer_out[3] = 0;
+    buffer_out[4] = par;
+    buffer_out[5] = ((int)buffer_out[0] + (int)buffer_out[1] + (int)buffer_out[2] + (int)buffer_out[3] + (int)buffer_out[4]) % 256;
+    buffer_out[6] = '\0';
+
+	serial_send(serial_fd, &buffer_out],6);*/
+}
+
+// Comprobar estado de raspberry
+char checkStatus(char ID, char com) {
+    // Comprobar temperatura
+    send_msg(ID, com, 0x00);
+    //Recibir respuesta
+    timeout_ocurred = serial_read(serial_fd, buffer_in, 6, timeout_usec);
+    //Si llega respuesta antes del timeout
+    if(timeout_ocurred != 0) {
+        // Devolver estado
+        return buffer_in[4];
+    } else {
+        return -1;
     }
 }

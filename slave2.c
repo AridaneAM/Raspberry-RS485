@@ -29,11 +29,6 @@ int ID;
 
 ////////////////////////////////////////////////////////////
 // Declaracion de la funcion prototipo...
-// Enviar una cadena de caracteres por el puerto serie
-void serial_send_string(char * msg);
-
-////////////////////////////////////////////////////////////
-// Declaracion de la funcion prototipo...
 // Lectura de temperatura de CPU
 char CPU_temp (void);
 
@@ -75,20 +70,20 @@ char buffer_out[7]; //Buffer para almacenar trama a enviar
 // ******** Programa PRINCIPAL ****************************
 int main (int argc, char* argv[]){
 
-    // Inicializa la libreria wiringPi
+    // Inicializar la libreria wiringPi
 	wiringPiSetup();
 
-    // Configura direccion de cada pin
+    // Configurar direccion de cada pin
 	pinMode(YEL1, OUTPUT);
 	pinMode(RED1, OUTPUT);
 	pinMode(S1, INPUT);
     pinMode(S2, INPUT);
 	
-	// Apaga todos los LEDs
+	// Apagar todos los LEDs
 	digitalWrite(YEL1,LOW);
 	digitalWrite(RED1,LOW);
 	
-    // Abre el puerto serie
+    // Abrir puerto serie
     serial_fd=serial_open("/dev/ttyS0", B9600); 
     if (serial_fd==-1) {    // Error en apertura?
         printf ("Error abriendo el puerto serie\n");
@@ -122,21 +117,12 @@ int main (int argc, char* argv[]){
             if(checksum(buffer_in)){
                 //Si el checksum es correcto, comprobar dirección de destino es la de este esclavo (si no es correcto descartarla, borra buffer y poner en escucha de nuevo)           
                 if(buffer_in[1] == ID) {
-					
-					
-			    printf("correcto ID");
-				fflush(stdout);
-				
-
                     //Si la dirección es la correcta, procesar trama (comando y datos si el comando lo indica)
-                    switch ((int)buffer_in[2])
-                    {
+                    switch ((int)buffer_in[2]) {
                     case 0x00: // Hola
                         send_reply(buffer_in, 0x00);                        
                         break;
                     case 0x10: // cambiar estado LED rojo
-						printf("hola");
-						fflush(stdout);
                         change_LED(RED1, buffer_in[4]);
                         send_reply(buffer_in, 0x00);
                         break;
@@ -174,17 +160,6 @@ int main (int argc, char* argv[]){
 
 /////////////////////////////////////////////////////////
 // **************** FUNCIONES ///////////////////////////
-
-// Envia una cadena de caracteres terminada en '\0' por el puerto serie
-void serial_send_string(char * msg){
-    int i;
-    i = 0;
-    while (msg[i] != '\0'){
-        // Transmitir dato (caracter)
-        serial_send(serial_fd, &msg[i] ,1);
-        i++;
-    }
-}
 
 // Lectura de temperatura de CPU
 char CPU_temp (void) {
