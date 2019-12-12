@@ -69,27 +69,26 @@ int main (int argc, char* argv[]){
 	digitalWrite(RED1,LOW);
 	
     // Abrir puerto serie
-    serial_fd=serial_open("/dev/ttyS0", B9600); 
+    serial_fd=serial_open("/dev/ttyUSB0", B9600); 
     if (serial_fd==-1) {    // Error en apertura?
         printf ("Error abriendo el puerto serie\n");
         fflush(stdout);
         exit(0);
     }
 
-    //Abrir fichero "config.txt" y crear "log.txt"
+    //Abrir fichero "config.txt"
     config_file = fopen("config.txt", "r");
     if (config_file == NULL) {
-        printf("No exite fichero de configuración\n");
+        printf("No existe fichero de configuración\n");
         fflush(stdout);
         exit(0);
     }  
-
-    log_file = fopen("log.txt", "w");
     //Leer número identificador de "config.txt"
     fscanf(config_file, "%d", &ID);
     //Cerrar fichero config
     fclose(config_file);
-   
+    //Crear "log.txt"
+    log_file = fopen("log.txt", "w");
 
     while(1){
         //Recibir trama de 6 bytes por puerto serie y almacenar en buffer

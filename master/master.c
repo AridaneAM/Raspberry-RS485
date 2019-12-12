@@ -212,12 +212,12 @@ char receive_msg(char com) {
                 return 253;
             }
         } else {
-            printf("Checksum de la trama recibida incorrecto");
+            printf("Checksum de la trama recibida incorrecto\n");
             fflush(stdout);
             return 254;
         }
     } else {
-        printf("Se ha producido un timeout en la espera del mensaje");
+        printf("Se ha producido un timeout en la espera del mensaje\n");
         fflush(stdout);
         return 255;
     }
