@@ -91,6 +91,12 @@ int main (int argc, char* argv[]){
 
     //Detectar qué raspberry hay conectada con comando Hola
     RPI_search();
+    //Terminar el programa si no hay suficientes RPI
+    if(count_RPI) < 2 {
+        printf("No se han encontrado suficientes raspberrys para el programa!\n")
+        fflush(stdout);
+        exit(-1);
+    }
     //Mostrar listado en pantalla 
     printf("Se han encontrado %d raspberrys con IDs: ", count_RPI);
     for (int i = 0; i < count_RPI; i++) {
